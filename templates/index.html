@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Metro Assistant</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="top-bar">
+    <div class="title">🛤️ AI Metro Assistant</div>
+    <div class="lang-select">
+      <a href="/?lang=en" class="{% if lang=='en' %}active{% endif %}">EN</a> |
+      <a href="/?lang=hi" class="{% if lang=='hi' %}active{% endif %}">हि</a>
+    </div>
+  </div>
+  <div class="content">
+    <div class="mic-area">
+      <button id="record-btn"><img src="{{ url_for('static', filename='mic.png') }}" alt="Mic"></button>
+      <div class="waves hidden" id="wave-bars">{% for i in range(10) %}<span style="--i:{{i+1}}"></span>{% endfor %}</div>
+    </div>
+    <div class="response-area hidden" id="response-area">
+      <h3>Your Request:</h3>
+      <p id="tx"></p>
+      <h3>Route Details:</h3>
+      <pre id="resp"></pre>
+      <audio id="audioPlayer" controls></audio>
+    </div>
+  </div>
+  <script>
+    const recordBtn = document.getElementById('record-btn');
+    const waves = document.getElementById('wave-bars');
+    const bars = waves.querySelectorAll('span');
+    const responseArea = document.getElementById('response-area');
+    const tx = document.getElementById('tx');
+    const resp = document.getElementById('resp');
+    const audioPlayer = document.getElementById('audioPlayer');
+
+    recordBtn.addEventListener('click', async () => {
+      waves.classList.remove('hidden'); bars.forEach(b => b.classList.add('active'));
+      const res = await fetch(`/process?lang={{lang}}`, { method: 'POST' });
+      const data = await res.json();
+      bars.forEach(b => b.classList.remove('active')); waves.classList.add('hidden');
+      if (data.error) return alert(data.error);
+  
+      responseArea.classList.remove('hidden');
+      tx.textContent = data.transcript;
+      resp.textContent = data.response;
+      audioPlayer.src = data.audio_url;
+      audioPlayer.play();
+    });
+  </script>
+</body>
+</html>

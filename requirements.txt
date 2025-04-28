@@ -1,0 +1,10 @@
+flask
+gradio
+pandas
+networkx
+sounddevice
+scipy
+SpeechRecognition
+edge-tts
+requests
+python-dotenv
