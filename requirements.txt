@@ -8,3 +8,5 @@ SpeechRecognition
 edge-tts
 requests
 python-dotenv
+scikit-learn
+numpy
