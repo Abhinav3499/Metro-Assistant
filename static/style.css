@@ -681,11 +681,25 @@ body {
   font-size: 0.97rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: space-between;
 }
 .station-name {
   color: #667eea;
   font-weight: 500;
+}
+.remove-favorite {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+}
+.remove-favorite:hover {
+  background: #ff6b6b;
+  color: white;
 }
 .route-item {
   background: #f7f7fa;

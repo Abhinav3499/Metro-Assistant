@@ -1,8 +1,8 @@
-# 🚇 AI Metro Assistant - Enhanced Version
+# �� AI Metro Assistant
 
-A comprehensive Delhi Metro assistant with **Agentic AI**, **RAG (Retrieval-Augmented Generation)**, **database integration**, and **modern UI**.
+A comprehensive Delhi Metro assistant with **Agentic AI**, **RAG (Retrieval-Augmented Generation)**, and **modern UI**.
 
-## ✨ **New Features**
+## ✨ **Features**
 
 ### 🤖 **Agentic AI**
 - **Intent Classification**: Automatically detects user intent (route finding, schedule, fare, station info)
@@ -16,16 +16,10 @@ A comprehensive Delhi Metro assistant with **Agentic AI**, **RAG (Retrieval-Augm
 - **Enhanced Responses**: Combines LLM responses with real metro data
 - **Dynamic Updates**: Can be updated with new GTFS data
 
-### 💾 **Database Integration**
-- **Conversation History**: Stores all user interactions with timestamps
-- **User Preferences**: Remembers language, favorite stations, accessibility needs
-- **Analytics**: Tracks popular routes and usage patterns
-- **Session Management**: Persistent user sessions across visits
-
 ### 🎨 **Modern UI**
 - **Responsive Design**: Works on desktop, tablet, and mobile
 - **Chat Interface**: Real-time conversation with voice and text input
-- **Sidebar Panels**: History, favorites, and popular routes
+- **Sidebar Panels**: History, favorites, and popular routes (static data)
 - **Settings Modal**: User preferences and accessibility options
 - **Toast Notifications**: Real-time feedback and error messages
 
@@ -77,13 +71,11 @@ http://localhost:5000
 ```
 Metro-Assistant/
 ├── app.py                 # Main Flask application
-├── gradio_interface.py    # Alternative Gradio interface
 ├── requirements.txt       # Python dependencies
 ├── README.md             # This file
 ├── handlers/
 │   ├── agent.py          # Agentic AI implementation
 │   ├── rag.py            # RAG system
-│   ├── database.py       # Database operations
 │   ├── route_finder.py   # Enhanced route finding
 │   ├── schedule.py       # Real-time schedules
 │   ├── station_info.py   # Station details
@@ -115,9 +107,6 @@ Metro-Assistant/
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### Database
-The application uses SQLite for data storage. The database file (`metro_assistant.db`) will be created automatically on first run.
-
 ### GTFS Data
 The application includes GTFS data for Delhi Metro. To update with newer data:
 1. Download latest GTFS data from Delhi Metro
@@ -145,13 +134,13 @@ The application includes GTFS data for Delhi Metro. To update with newer data:
 - `POST /process` - Process voice input
 - `POST /process_text` - Process text input
 
-### Database Endpoints
-- `GET /api/history` - Get conversation history
-- `GET /api/favorites` - Get favorite stations
-- `GET /api/popular_routes` - Get popular routes
-- `GET /api/user_insights` - Get user analytics
-- `POST /api/add_favorite` - Add station to favorites
-- `GET/POST /api/preferences` - User preferences
+### Static Data Endpoints
+- `GET /api/history` - Get conversation history (empty)
+- `GET /api/favorites` - Get favorite stations (empty)
+- `GET /api/popular_routes` - Get popular routes (empty)
+- `GET /api/user_insights` - Get user analytics (empty)
+- `POST /api/add_favorite` - Add station to favorites (no-op)
+- `GET/POST /api/preferences` - User preferences (empty)
 
 ## 🔍 **Features in Detail**
 
@@ -176,15 +165,6 @@ relevant_info = rag.search("Rajiv Chowk station facilities")
 enhanced_response = enhance_response_with_rag(query, base_response)
 ```
 
-### Database Operations
-```python
-# Save conversation
-db.save_conversation(session_id, query, response)
-
-# Get user insights
-insights = db.get_user_insights(session_id)
-```
-
 ## 🎨 **UI Components**
 
 ### Chat Interface
@@ -194,9 +174,9 @@ insights = db.get_user_insights(session_id)
 - Message timestamps
 
 ### Sidebar Panels
-- **Recent Queries**: Last 10 conversations
-- **Favorite Stations**: User's saved stations
-- **Popular Routes**: Most searched routes
+- **Recent Queries**: Empty state (no database)
+- **Favorite Stations**: Empty state (no database)
+- **Popular Routes**: Empty state (no database)
 
 ### Info Sidebar
 - **Quick Info**: Operating hours, fare range, metro lines
@@ -209,29 +189,6 @@ insights = db.get_user_insights(session_id)
 2. Add route in `app.py`
 3. Update UI in `templates/index.html`
 4. Add styles in `static/style.css`
-
-### Database Schema
-```sql
--- Conversations table
-CREATE TABLE conversations (
-    id TEXT PRIMARY KEY,
-    session_id TEXT,
-    user_query TEXT,
-    assistant_response TEXT,
-    route_data TEXT,
-    language TEXT,
-    timestamp DATETIME,
-    processing_time REAL
-);
-
--- User preferences
-CREATE TABLE user_preferences (
-    session_id TEXT PRIMARY KEY,
-    preferred_language TEXT,
-    frequent_stations TEXT,
-    accessibility_needs TEXT
-);
-```
 
 ## 🚀 **Deployment**
 
@@ -256,14 +213,11 @@ docker run -p 5000:5000 metro-assistant
 ### Optimization Features
 - **Caching**: GTFS data loaded once at startup
 - **Async Processing**: Non-blocking audio processing
-- **Database Indexing**: Optimized queries for large datasets
-- **CDN Integration**: Static assets served efficiently
+- **Memory Efficient**: No database overhead
 
 ### Monitoring
 - Processing time tracking
 - Error logging
-- User analytics
-- Popular route tracking
 
 ## 🤝 **Contributing**
 

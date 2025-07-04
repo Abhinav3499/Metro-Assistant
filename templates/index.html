@@ -17,10 +17,6 @@
           <span>Metro Assistant</span>
         </div>
         <div class="header-actions">
-          <div class="lang-select">
-            <a href="/?lang=en" class="lang-btn {% if lang=='en' %}active{% endif %}">EN</a>
-            <a href="/?lang=hi" class="lang-btn {% if lang=='hi' %}active{% endif %}">हि</a>
-          </div>
           <button class="settings-btn" onclick="toggleSettings()">
             <i class="fas fa-cog"></i>
           </button>
@@ -64,7 +60,7 @@
                 <div class="message-content">
                   <i class="fas fa-robot"></i>
                   <div class="text">
-                    <p>Hello! I'm your Delhi Metro Assistant. Ask me about routes, schedules, fares, or any metro-related information. You can speak in English or Hindi.</p>
+                    <p>Hello! I'm your Delhi Metro Assistant. Ask me about routes, schedules, fares, or any metro-related information.</p>
                   </div>
                 </div>
                 <div class="message-time">Just now</div>
@@ -158,10 +154,9 @@
         </div>
         <div class="modal-body">
           <div class="setting-group">
-            <label>Language Preference</label>
+            <label>Language</label>
             <select id="languageSelect">
-              <option value="en" {% if lang=='en' %}selected{% endif %}>English</option>
-              <option value="hi" {% if lang=='hi' %}selected{% endif %}>हिंदी</option>
+              <option value="en" selected>English</option>
             </select>
           </div>
           <div class="setting-group">
@@ -180,6 +175,9 @@
     let sessionId = 'session_' + Date.now();
     let isRecording = false;
     let currentAudio = null;
+    let recentQueries = [];
+    let favoriteStations = [];
+    let popularRoutes = [];
 
     // Initialize the app
     document.addEventListener('DOMContentLoaded', function() {
@@ -244,7 +242,7 @@
 
     async function processRecording() {
       try {
-        const response = await fetch(`/process?lang={{lang}}`, { method: 'POST' });
+        const response = await fetch(`/process?lang=en`, { method: 'POST' });
         const data = await response.json();
         
         if (data.error) {
@@ -252,6 +250,7 @@
         } else {
           addMessage(data.transcript, 'user');
           addMessage(data.response, 'assistant');
+          updateRecentQueries(data.transcript, data.response);
           playAudio(data.audio_url);
         }
       } catch (error) {
@@ -270,11 +269,31 @@
       addMessage(message, 'user');
       input.value = '';
       
-      // Simulate processing
-      setTimeout(() => {
-        addMessage('Processing your request...', 'assistant');
-        // Here you would make an API call to process the text
-      }, 1000);
+      // Process the text message
+      processTextMessage(message);
+    }
+
+    async function processTextMessage(message) {
+      try {
+        const response = await fetch('/process_text', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ query: message })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+          addMessage('Error: ' + data.error, 'assistant');
+        } else {
+          addMessage(data.response, 'assistant');
+          updateRecentQueries(message, data.response);
+        }
+      } catch (error) {
+        addMessage('Error processing your request', 'assistant');
+      }
     }
 
     function addMessage(text, type) {
@@ -333,56 +352,140 @@
     }
 
     function loadHistory() {
-      fetch('/api/history')
-        .then(res => res.json())
-        .then(history => {
-          const historyList = document.getElementById('historyList');
-          if (!history.length) {
-            historyList.innerHTML = '<p class="empty-state">No recent queries</p>';
-            return;
-          }
-          historyList.innerHTML = history.map(item =>
-            `<div class="history-item">
-              <div class="history-query">${item.user_query}</div>
-              <div class="history-response">${item.assistant_response}</div>
-            </div>`
-          ).join('');
-        });
+      const historyList = document.getElementById('historyList');
+      if (!recentQueries.length) {
+        historyList.innerHTML = '<p class="empty-state">No recent queries</p>';
+        return;
+      }
+      historyList.innerHTML = recentQueries.map(item =>
+        `<div class="history-item">
+          <div class="history-query">${item.user_query}</div>
+          <div class="history-response">${item.assistant_response}</div>
+        </div>`
+      ).join('');
+    }
+
+    function updateRecentQueries(userQuery, assistantResponse) {
+      // Add new query to the beginning of the array
+      recentQueries.unshift({
+        user_query: userQuery,
+        assistant_response: assistantResponse,
+        timestamp: new Date().toLocaleTimeString()
+      });
+      
+      // Keep only the last 10 queries
+      if (recentQueries.length > 10) {
+        recentQueries = recentQueries.slice(0, 10);
+      }
+      
+      // Update the history display
+      loadHistory();
+      
+      // Try to extract station names and update favorites/popular routes
+      extractAndUpdateStations(userQuery, assistantResponse);
+    }
+
+    function extractAndUpdateStations(userQuery, assistantResponse) {
+      // Common Delhi Metro station names
+      const stationNames = [
+        'Rajiv Chowk', 'Connaught Place', 'Kashmere Gate', 'Central Secretariat',
+        'Airport', 'Dwarka', 'Gurgaon', 'Noida', 'Faridabad', 'Ghaziabad',
+        'Kalkaji Mandir', 'Lajpat Nagar', 'Saket', 'Qutub Minar', 'Hauz Khas',
+        'Green Park', 'AIIMS', 'South Extension', 'Lajpat Nagar', 'Moolchand',
+        'Kailash Colony', 'Nehru Place', 'Kalkaji Mandir', 'Govind Puri',
+        'Okhla', 'Jasola', 'Sarita Vihar', 'Mohan Estate', 'Tughlakabad',
+        'Badarpur', 'Sarai', 'NHPC Chowk', 'Mewala Maharajpur', 'Sector 28',
+        'Badkhal', 'Old Faridabad', 'Neelam Chowk Ajronda', 'Bata Chowk',
+        'Escorts Mujesar', 'Sant Surdas', 'Raja Nahar Singh', 'Ballabhgarh'
+      ];
+      
+      // Extract station names from user query
+      const foundStations = stationNames.filter(station => 
+        userQuery.toLowerCase().includes(station.toLowerCase())
+      );
+      
+      // Add found stations to favorites
+      foundStations.forEach(station => {
+        addFavorite(station);
+      });
+      
+      // If we found 2 or more stations, it might be a route query
+      if (foundStations.length >= 2) {
+        updatePopularRoutes(foundStations[0], foundStations[1]);
+      }
     }
 
     function loadFavorites() {
-      fetch('/api/favorites')
-        .then(res => res.json())
-        .then(favorites => {
-          const favoritesList = document.getElementById('favoritesList');
-          if (!favorites.length) {
-            favoritesList.innerHTML = '<p class="empty-state">No favorite stations</p>';
-            return;
-          }
-          favoritesList.innerHTML = favorites.map(item =>
-            `<div class="favorite-item">
-              <span class="station-name">${item.name}</span>
-            </div>`
-          ).join('');
+      const favoritesList = document.getElementById('favoritesList');
+      if (!favoriteStations.length) {
+        favoritesList.innerHTML = '<p class="empty-state">No favorite stations</p>';
+        return;
+      }
+      favoritesList.innerHTML = favoriteStations.map(item =>
+        `<div class="favorite-item">
+          <span class="station-name">${item.name}</span>
+          <button class="remove-favorite" onclick="removeFavorite('${item.name}')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>`
+      ).join('');
+    }
+
+    function addFavorite(stationName) {
+      if (!favoriteStations.find(station => station.name === stationName)) {
+        favoriteStations.push({
+          name: stationName,
+          added: new Date().toLocaleTimeString()
         });
+        loadFavorites();
+      }
+    }
+
+    function removeFavorite(stationName) {
+      favoriteStations = favoriteStations.filter(station => station.name !== stationName);
+      loadFavorites();
     }
 
     function loadPopularRoutes() {
-      fetch('/api/popular_routes')
-        .then(res => res.json())
-        .then(routes => {
-          const popularRoutes = document.getElementById('popularRoutes');
-          if (!routes.length) {
-            popularRoutes.innerHTML = '<p class="empty-state">No popular routes</p>';
-            return;
-          }
-          popularRoutes.innerHTML = routes.map(item =>
-            `<div class="route-item">
-              <span>${item.from} → ${item.to}</span>
-              <span class="route-count">${item.searches} searches</span>
-            </div>`
-          ).join('');
+      const popularRoutesElement = document.getElementById('popularRoutes');
+      if (!popularRoutes.length) {
+        popularRoutesElement.innerHTML = '<p class="empty-state">No popular routes</p>';
+        return;
+      }
+      popularRoutesElement.innerHTML = popularRoutes.map(item =>
+        `<div class="route-item">
+          <span>${item.from} → ${item.to}</span>
+          <span class="route-count">${item.searches} searches</span>
+        </div>`
+      ).join('');
+    }
+
+    function updatePopularRoutes(fromStation, toStation) {
+      const routeKey = `${fromStation} → ${toStation}`;
+      const existingRoute = popularRoutes.find(route => 
+        (route.from === fromStation && route.to === toStation) ||
+        (route.from === toStation && route.to === fromStation)
+      );
+      
+      if (existingRoute) {
+        existingRoute.searches++;
+      } else {
+        popularRoutes.push({
+          from: fromStation,
+          to: toStation,
+          searches: 1
         });
+      }
+      
+      // Sort by number of searches (descending)
+      popularRoutes.sort((a, b) => b.searches - a.searches);
+      
+      // Keep only top 5 routes
+      if (popularRoutes.length > 5) {
+        popularRoutes.splice(5);
+      }
+      
+      loadPopularRoutes();
     }
 
     // Close modal when clicking outside

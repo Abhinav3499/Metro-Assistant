@@ -4,7 +4,7 @@ import requests
 from typing import Dict, List, Any
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-from handlers.llm import clean_text_for_tts
+from handlers.llm import clean_text_for_tts, extract_stations, clarification_prompt
 
 load_dotenv()
 api_key = os.getenv('GEMINI_API_KEY')
@@ -77,7 +77,9 @@ class MetroAgent:
             return get_station_details(action['station'])
         
         elif action_type == "clarify_stations":
-            return {"type": "clarification", "message": action["message"]}
+            # Use improved clarification prompt
+            lang = self.user_context.get('lang', 'en') if hasattr(self, 'user_context') else 'en'
+            return {"type": "clarification", "message": clarification_prompt(lang, action.get('from'), action.get('to'))}
         
         return {"error": "Unknown action"}
     
@@ -125,7 +127,7 @@ class MetroAgent:
 def process_with_agent(query: str, lang: str = 'en') -> str:
     """Main function to process queries using the agentic approach"""
     agent = MetroAgent()
-    
+    agent.user_context['lang'] = lang
     # Step 1: Classify intent
     intent_data = agent.classify_intent(query)
     
